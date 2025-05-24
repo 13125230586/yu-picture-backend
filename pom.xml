@@ -39,6 +39,13 @@
             <version>5.8.26</version>
         </dependency>
 
+        <!-- 腾讯云 cos 服务 对象存储 -->
+        <dependency>
+            <groupId>com.qcloud</groupId>
+            <artifactId>cos_api</artifactId>
+            <version>5.6.227</version>
+        </dependency>
+
         <!-- 接口文档 Knife4j:  https://doc.xiaominfo.com/docs/quick-start#openapi2-->
         <dependency>
             <groupId>com.github.xiaoymin</groupId>

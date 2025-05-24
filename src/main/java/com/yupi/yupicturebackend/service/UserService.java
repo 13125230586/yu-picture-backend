@@ -12,9 +12,16 @@ import java.util.List;
 
 /**
  * @author hccmac
- * @description 针对表【user(用户)】的数据库操作Service
- * @createDate 2025-05-08 17:14:19
+ * 用户管理
+ * 用户管理功能具体可以拆分为：
+ * - 【管理员】创建用户
+ * - 【管理员】根据id 删除用户
+ * - 【管理员】更新用户
+ * - 【管理员】分页获取用户列表（需要脱敏）
+ * - 【管理员】根据 id 获取用户（未脱敏）
+ * - 根据id 获取用户 （脱敏）
  */
+
 public interface UserService extends IService<User> {
 
     /**
@@ -100,4 +107,14 @@ public interface UserService extends IService<User> {
      * @return 查询条件
      */
     QueryWrapper<User> getQueryWrapper(UserQueryRequest userQueryRequest);
+
+
+    /**
+     * 是否为管理员
+     *
+     * @param user
+     * @return
+     */
+    boolean isAdmin(User user);
+
 }

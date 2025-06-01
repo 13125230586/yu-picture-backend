@@ -73,7 +73,6 @@ public interface UserService extends IService<User> {
      */
     List<UserVO> getUserVOList(List<User> userList);
 
-
     /**
      * 获取当前登录用户
      *
@@ -91,7 +90,6 @@ public interface UserService extends IService<User> {
      */
     boolean userLogout(HttpServletRequest request);
 
-
     /**
      * 密码加密
      *
@@ -103,11 +101,11 @@ public interface UserService extends IService<User> {
 
     /**
      * 获取查询条件
+     *
      * @param userQueryRequest 用户查询请求
      * @return 查询条件
      */
     QueryWrapper<User> getQueryWrapper(UserQueryRequest userQueryRequest);
-
 
     /**
      * 是否为管理员

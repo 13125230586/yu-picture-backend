@@ -11,7 +11,7 @@ import java.lang.annotation.Target;
 public @interface AuthCheck {
 
     /**
-     * 必须有某个角色
+     * 必须有某个角色，默认空字符串无限制
      */
     String mustRole() default "";
 }

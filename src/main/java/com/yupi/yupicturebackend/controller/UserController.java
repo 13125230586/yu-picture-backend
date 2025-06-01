@@ -44,6 +44,7 @@ public class UserController {
         return ResultUtils.success(result);
     }
 
+
     /**
      * 用户登录
      */
@@ -62,10 +63,10 @@ public class UserController {
      */
     @GetMapping("/get/login")
     public BaseResponse<LoginUserVO> getLoginUser(HttpServletRequest request) {
-        User currentUser = userService.getLoginUser(request);
-        //返回脱敏信息，用userService.getLoginUserVO(currentUser)
-        return ResultUtils.success(userService.getLoginUserVO(currentUser));
+        User user = userService.getLoginUser(request);
+        return ResultUtils.success(userService.getLoginUserVO(user));
     }
+
 
     /**
      * 用户注销
@@ -86,9 +87,9 @@ public class UserController {
     public BaseResponse<Long> addUser(@RequestBody UserAddRequest userAddRequest) {
         ThrowUtils.throwIf(userAddRequest == null, ErrorCode.PARAMS_ERROR);
         User user = new User();
+        ThrowUtils.throwIf(userAddRequest.getUserAccount().length() < 4, ErrorCode.PARAMS_ERROR, "账户信息不低于4位");
         BeanUtil.copyProperties(userAddRequest, user);
-        String encryptPassword = userService.getEncryptPassword(DEFAULT_PASSWORD);
-        user.setUserPassword(encryptPassword);
+        user.setUserPassword(DEFAULT_PASSWORD);
         boolean save = userService.save(user);
         ThrowUtils.throwIf(!save, ErrorCode.OPERATION_ERROR);
         return ResultUtils.success(user.getId());
@@ -109,13 +110,15 @@ public class UserController {
 
 
     /**
-     * 根据id获取包装类
+     * 根据id获取脱敏信息，无限制
      */
     @GetMapping("/get/vo")
-    public BaseResponse<LoginUserVO> getUserVOById(long id) {
+    public BaseResponse<UserVO> getUserVOById(long id) {
+        ThrowUtils.throwIf(id <= 0, ErrorCode.PARAMS_ERROR);
         BaseResponse<User> userById = getUserById(id);
         User user = userById.getData();
-        return ResultUtils.success(userService.getLoginUserVO(user));
+        ThrowUtils.throwIf(user == null, ErrorCode.NOT_FOUND_ERROR);
+        return ResultUtils.success(userService.getUserVO(user));
     }
 
 
@@ -125,7 +128,7 @@ public class UserController {
     @PostMapping("/delete")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Boolean> deleteUser(@RequestBody DeleteRequest deleteRequest) {
-        ThrowUtils.throwIf(deleteRequest == null || deleteRequest.getId() <= 0, ErrorCode.PARAMS_ERROR);
+        ThrowUtils.throwIf(deleteRequest == null && deleteRequest.getId() <= 0, ErrorCode.PARAMS_ERROR);
         boolean b = userService.removeById(deleteRequest.getId());
         return ResultUtils.success(b);
     }
@@ -137,12 +140,11 @@ public class UserController {
     @PostMapping("/update")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Boolean> updateUser(@RequestBody UserUpdateRequest userUpdateRequest) {
-        ThrowUtils.throwIf(userUpdateRequest.getId() == null || userUpdateRequest.getId() == 0, ErrorCode.PARAMS_ERROR);
+        ThrowUtils.throwIf(userUpdateRequest == null && userUpdateRequest.getId() == null, ErrorCode.PARAMS_ERROR);
         User user = new User();
         BeanUtil.copyProperties(userUpdateRequest, user);
-        boolean result = userService.updateById(user);
-        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
-        return ResultUtils.success(true);
+        boolean b = userService.updateById(user);
+        return ResultUtils.success(b);
     }
 
 
@@ -152,18 +154,15 @@ public class UserController {
     @PostMapping("/list/page/vo")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Page<UserVO>> listUserVOByPage(@RequestBody UserQueryRequest userQueryRequest) {
-        ThrowUtils.throwIf(Objects.isNull(userQueryRequest), ErrorCode.PARAMS_ERROR,"请求参数为空" );
-        //获取当前页和每页大小
-        long current = userQueryRequest.getCurrent();
-        long pageSize = userQueryRequest.getPageSize();
-        //进入分页查询，采用page方法,userService继承了IService<>接口
+        ThrowUtils.throwIf(Objects.isNull(userQueryRequest),ErrorCode.PARAMS_ERROR,"获取用户信息分页请求入参为空");
+        int current = userQueryRequest.getCurrent();
+        int pageSize = userQueryRequest.getPageSize();
         Page<User> userPage = userService.page(new Page<>(current, pageSize), userService.getQueryWrapper(userQueryRequest));
-        //需要返回脱敏用户列表信息
+        //返回UserVO，用户脱敏信息
         List<UserVO> userVOList = userService.getUserVOList(userPage.getRecords());
-        Page<UserVO> userVOPage = new Page<>(current, pageSize, userPage.getTotal());
-        userVOPage.setRecords(userVOList);
-        return ResultUtils.success(userVOPage);
-
+        Page<UserVO> userPageVO = new Page<>(current,pageSize,userPage.getTotal());
+        userPageVO.setRecords(userVOList);
+        return ResultUtils.success(userPageVO);
     }
 
 

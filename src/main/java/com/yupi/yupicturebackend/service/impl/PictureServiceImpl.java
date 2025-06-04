@@ -19,25 +19,24 @@ import com.yupi.yupicturebackend.model.vo.UserVO;
 import com.yupi.yupicturebackend.service.PictureService;
 import com.yupi.yupicturebackend.mapper.PictureMapper;
 import com.yupi.yupicturebackend.service.UserService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
-* @author hccmac
-* @description 针对表【picture(图片)】的数据库操作Service实现
-* @createDate 2025-05-18 09:45:23
-*/
+ * @author hccmac
+ * @description 针对表【picture(图片)】的数据库操作Service实现
+ * @createDate 2025-05-18 09:45:23
+ */
+@Slf4j
 @Service
-public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
-    implements PictureService{
+public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> implements PictureService {
 
     @Resource
     FileManager fileManager;
@@ -63,27 +62,30 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         }
     }
 
-
+    /**
+     * @param multipartFile        图片文件
+     * @param pictureUploadRequest 图片id
+     * @param loginUser            登录用户
+     * @return picture
+     */
     @Override
     public PictureVO uploadPicture(MultipartFile multipartFile, PictureUploadRequest pictureUploadRequest, User loginUser) {
-        ThrowUtils.throwIf(loginUser == null, ErrorCode.NO_AUTH_ERROR);
-        // 用于判断是新增还是更新图片
+        ThrowUtils.throwIf(loginUser == null, ErrorCode.NO_AUTH_ERROR, "用户未登录，不能上传图片");
+        //1.根据pictureId判断是否更新
         Long pictureId = null;
-        if (pictureUploadRequest != null) {
+        if (pictureUploadRequest.getId() != null) {
             pictureId = pictureUploadRequest.getId();
         }
-        // 如果是更新图片，需要校验图片是否存在
         if (pictureId != null) {
             boolean exists = this.lambdaQuery()
                     .eq(Picture::getId, pictureId)
                     .exists();
-            ThrowUtils.throwIf(!exists, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
+            ThrowUtils.throwIf(!exists, ErrorCode.SYSTEM_ERROR, "图片不存在");
         }
-        // 上传图片，得到信息
-        // 按照用户 id 划分目录
         String uploadPathPrefix = String.format("public/%s", loginUser.getId());
+        //2.调用fileManager.uploadPicture(),根据入参，获取参数：文件，上传路径
         UploadPictureResult uploadPictureResult = fileManager.uploadPicture(multipartFile, uploadPathPrefix);
-        // 构造要入库的图片信息
+        //3.根据返回结果封装picture
         Picture picture = new Picture();
         picture.setUrl(uploadPictureResult.getUrl());
         picture.setName(uploadPictureResult.getPicName());
@@ -93,23 +95,21 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         picture.setPicScale(uploadPictureResult.getPicScale());
         picture.setPicFormat(uploadPictureResult.getPicFormat());
         picture.setUserId(loginUser.getId());
-        // 如果 pictureId 不为空，表示更新，否则是新增
+        picture.setCreateTime(new Date());
+
         if (pictureId != null) {
-            // 如果是更新，需要补充 id 和编辑时间
+            //pictureId不为空则表示是更新
             picture.setId(pictureId);
             picture.setEditTime(new Date());
         }
         boolean result = this.saveOrUpdate(picture);
-        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "图片上传失败");
+        log.info("上传图片成功 userId : {} pictureId : {} result : {}", loginUser.getId(), pictureId, result);
         return PictureVO.objToVo(picture);
     }
 
-
     @Override
     public PictureVO getPictureVO(Picture picture, HttpServletRequest request) {
-        // 对象转封装类
         PictureVO pictureVO = PictureVO.objToVo(picture);
-        // 关联查询用户信息
         Long userId = picture.getUserId();
         if (userId != null && userId > 0) {
             User user = userService.getById(userId);
@@ -119,41 +119,42 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         return pictureVO;
     }
 
+
     /**
      * 分页获取图片封装
      */
     @Override
     public Page<PictureVO> getPictureVOPage(Page<Picture> picturePage, HttpServletRequest request) {
+        //1.先将pictureList -> pictureVOList
         List<Picture> pictureList = picturePage.getRecords();
         Page<PictureVO> pictureVOPage = new Page<>(picturePage.getCurrent(), picturePage.getSize(), picturePage.getTotal());
-        if (CollUtil.isEmpty(pictureList)) {
+        if(CollUtil.isEmpty(pictureList)){
             return pictureVOPage;
         }
-        // 对象列表 => 封装对象列表
-        List<PictureVO> pictureVOList = pictureList.
-                stream()
-                .map(PictureVO::objToVo)
-                .collect(Collectors.toList());
-        // 1. 关联查询用户信息
+        List<PictureVO> pictureVOList = pictureList.stream().map(PictureVO::objToVo).collect(Collectors.toList());
+        //2.再将pictureList里的所有用户信息去重放在集合中
         Set<Long> userIdSet = pictureList.stream().map(Picture::getUserId).collect(Collectors.toSet());
-        Map<Long, List<User>> userIdUserListMap = userService.listByIds(userIdSet).stream()
-                .collect(Collectors.groupingBy(User::getId));
-        // 2. 填充信息
+        //3.拿到userIdSet集合后批量查询，转化为map数组
+        Map<Long, List<User>> userIdUserListMap = userService.listByIds(userIdSet).stream().collect(Collectors.groupingBy(User::getId));
+        //4.判断当前用户id是否在Map数组中
         pictureVOList.forEach(pictureVO -> {
             Long userId = pictureVO.getUserId();
             User user = null;
-            if (userIdUserListMap.containsKey(userId)) {
+            if(userIdUserListMap.containsKey(userId)){
                 user = userIdUserListMap.get(userId).get(0);
             }
             pictureVO.setUser(userService.getUserVO(user));
         });
+        //5.返回Page封装的Page<PictureVO>
         pictureVOPage.setRecords(pictureVOList);
         return pictureVOPage;
     }
 
 
-
-
+    /**
+     * @param pictureQueryRequest 查询条件
+     * @return queryWrapper
+     */
     @Override
     public QueryWrapper<Picture> getQueryWrapper(PictureQueryRequest pictureQueryRequest) {
         QueryWrapper<Picture> queryWrapper = new QueryWrapper<>();
@@ -175,13 +176,9 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         Long userId = pictureQueryRequest.getUserId();
         String sortField = pictureQueryRequest.getSortField();
         String sortOrder = pictureQueryRequest.getSortOrder();
-        // 从多字段中搜索
+        // 从多字段中搜索 and (name like %xxx% or introduction like %xxx%)
         if (StrUtil.isNotBlank(searchText)) {
-            // 需要拼接查询条件
-            queryWrapper.and(qw -> qw.like("name", searchText)
-                    .or()
-                    .like("introduction", searchText)
-            );
+            queryWrapper.and(qw -> qw.like("name", searchText).or().like("introduction", searchText));
         }
         queryWrapper.eq(ObjUtil.isNotEmpty(id), "id", id);
         queryWrapper.eq(ObjUtil.isNotEmpty(userId), "userId", userId);
@@ -193,7 +190,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         queryWrapper.eq(ObjUtil.isNotEmpty(picHeight), "picHeight", picHeight);
         queryWrapper.eq(ObjUtil.isNotEmpty(picSize), "picSize", picSize);
         queryWrapper.eq(ObjUtil.isNotEmpty(picScale), "picScale", picScale);
-        // JSON 数组查询
+        // JSON 数组查询  and (tag like "%\"Java\""%" and like "%\"Python\""%")
         if (CollUtil.isNotEmpty(tags)) {
             for (String tag : tags) {
                 queryWrapper.like("tags", "\"" + tag + "\"");
@@ -203,11 +200,6 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         queryWrapper.orderBy(StrUtil.isNotEmpty(sortField), sortOrder.equals("ascend"), sortField);
         return queryWrapper;
     }
-
-
-
-
-
 
 
 }

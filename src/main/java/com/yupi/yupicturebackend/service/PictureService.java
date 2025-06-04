@@ -45,9 +45,7 @@ public interface PictureService extends IService<Picture> {
      * @param loginUser
      * @return
      */
-    PictureVO uploadPicture(MultipartFile multipartFile,
-                            PictureUploadRequest pictureUploadRequest,
-                            User loginUser);
+    PictureVO uploadPicture(MultipartFile multipartFile, PictureUploadRequest pictureUploadRequest, User loginUser);
 
 
     /**
@@ -61,7 +59,7 @@ public interface PictureService extends IService<Picture> {
 
 
     /**
-     * 分页获取图片封装
+     * 获取图片封装类（分页）
      *
      * @param
      * @return

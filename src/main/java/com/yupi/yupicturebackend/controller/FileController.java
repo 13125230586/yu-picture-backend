@@ -27,6 +27,8 @@ public class FileController {
     @Resource
     private CosManager cosManager;
 
+    public static final String FILE_UPLOAD_PATH = "/test/%s";
+
 
     /**
      * 测试文件上传
@@ -37,26 +39,22 @@ public class FileController {
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     @PostMapping("/test/upload")
     public BaseResponse<String> testUploadFile(@RequestPart("file") MultipartFile multipartFile) {
-        // 文件目录
-        String filename = multipartFile.getOriginalFilename();
-        String filepath = String.format("/test/%s", filename);
+        String originalFilename = multipartFile.getOriginalFilename();
+        String filepath = String.format(FILE_UPLOAD_PATH, originalFilename);
         File file = null;
         try {
-            // 上传文件
             file = File.createTempFile(filepath, null);
             multipartFile.transferTo(file);
             cosManager.putObject(filepath, file);
-            // 返回可访问地址
             return ResultUtils.success(filepath);
-        } catch (Exception e) {
-            log.error("file upload error, filepath : " + filepath, e);
+        } catch (IOException e) {
+            log.error("文件上传失败 filepath : {} ", filepath, e);
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "上传失败");
         } finally {
             if (file != null) {
-                // 删除临时文件
                 boolean delete = file.delete();
                 if (!delete) {
-                    log.error("file delete error, filepath : {}", filepath);
+                    log.error("临时文件删除失败 filepath : {}", filepath);
                 }
             }
         }
@@ -78,14 +76,14 @@ public class FileController {
             cosObjectInput = cosObject.getObjectContent();
             // 处理下载到的流
             byte[] bytes = IOUtils.toByteArray(cosObjectInput);
-            // 设置响应头
+            // 设置响应头 浏览器知道是这个响应头，就知道下载图片了
             response.setContentType("application/octet-stream;charset=UTF-8");
             response.setHeader("Content-Disposition", "attachment; filename=" + filepath);
-            // 写入响应
+            // 写入响应 输出流里写内容 输入流读
             response.getOutputStream().write(bytes);
             response.getOutputStream().flush();
         } catch (Exception e) {
-            log.error("file download error, filepath = " + filepath, e);
+            log.error("file download error, filepath : {}", filepath, e);
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "下载失败");
         } finally {
             if (cosObjectInput != null) {

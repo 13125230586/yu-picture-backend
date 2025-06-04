@@ -11,7 +11,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-@ConfigurationProperties(prefix = "cos.client")
+@ConfigurationProperties(prefix = "cos.client") //指定前缀
 @Data
 public class CosClientConfig {  
   

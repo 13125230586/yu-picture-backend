@@ -149,7 +149,8 @@ public class PictureController {
                                                              HttpServletRequest request) {
         int current = pictureQueryRequest.getCurrent();
         int pageSize = pictureQueryRequest.getPageSize();
-        ThrowUtils.throwIf(pageSize > 20, ErrorCode.PARAMS_ERROR);
+        //todo 这里主页先默认不大于100，看情况更改
+        ThrowUtils.throwIf(pageSize > 100, ErrorCode.PARAMS_ERROR);
         //查询数据库
         Page<Picture> picturePage = pictureService.page(new Page<>(current, pageSize), pictureService.getQueryWrapper(pictureQueryRequest));
         return ResultUtils.success(pictureService.getPictureVOPage(picturePage, request));

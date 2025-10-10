@@ -21,13 +21,13 @@ import java.io.IOException;
 
 @Slf4j
 @RestController
-@RequestMapping("/file")
+@RequestMapping("/file") //定义类级别的请求映射，所有方法的 URL 都会以 /file 为前缀
 public class FileController {
 
     @Resource
     private CosManager cosManager;
 
-    public static final String FILE_UPLOAD_PATH = "/test/%s";
+    private static final String FILE_UPLOAD_PATH = "/test/%s";
 
 
     /**
@@ -38,6 +38,7 @@ public class FileController {
      */
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     @PostMapping("/test/upload")
+    //@RequestPart 绑定 multipart/form-data 请求中的文件部分到方法参数，专门用于文件上传
     public BaseResponse<String> testUploadFile(@RequestPart("file") MultipartFile multipartFile) {
         String originalFilename = multipartFile.getOriginalFilename();
         String filepath = String.format(FILE_UPLOAD_PATH, originalFilename);
@@ -80,6 +81,7 @@ public class FileController {
             response.setContentType("application/octet-stream;charset=UTF-8");
             response.setHeader("Content-Disposition", "attachment; filename=" + filepath);
             // 写入响应 输出流里写内容 输入流读
+            // 这里思考为什么返回类型是void 前端怎么获取到值 用到是servlet的response 来设置返回值
             response.getOutputStream().write(bytes);
             response.getOutputStream().flush();
         } catch (Exception e) {

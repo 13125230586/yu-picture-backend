@@ -39,7 +39,7 @@
             <version>5.8.26</version>
         </dependency>
 
-        <!-- 腾讯云 cos 服务 对象存储 -->
+        <!-- 腾讯云 cos 服务 对象存储 安装javaSDK -->
         <dependency>
             <groupId>com.qcloud</groupId>
             <artifactId>cos_api</artifactId>

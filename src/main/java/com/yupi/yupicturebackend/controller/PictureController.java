@@ -190,6 +190,7 @@ public class PictureController {
 
     @GetMapping("/tag_category")
     public BaseResponse<PictureTagCategory> listPictureTagCategory() {
+        //todo 主页要显示的分类列表 后续可以通过->数据库动态管理这些数据，或者通过定时任务计算出热门的图片分类和标签。
         PictureTagCategory pictureTagCategory = new PictureTagCategory();
         List<String> tagList = Arrays.asList("热门", "搞笑", "生活", "高清", "艺术", "校园", "背景", "简历", "创意");
         List<String> categoryList = Arrays.asList("电脑壁纸", "手机壁纸", "头像", "表情包", "动漫");

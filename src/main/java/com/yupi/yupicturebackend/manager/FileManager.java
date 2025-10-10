@@ -94,7 +94,7 @@ public class FileManager {
         ThrowUtils.throwIf(multipartFile.getSize() > ONE_M * 2, ErrorCode.PARAMS_ERROR, "图片文件不能大于2M");
         //获取上传图片的后缀
         String suffix = FileUtil.getSuffix(multipartFile.getOriginalFilename());
-        ThrowUtils.throwIf(!PICTURE_ALLOW_LIST.contains(suffix), ErrorCode.PARAMS_ERROR, "文件类型错误");
+        ThrowUtils.throwIf(!PICTURE_ALLOW_LIST.contains(suffix), ErrorCode.PARAMS_ERROR, "文件类型错误，只支持jpeg、jpg、png、webp");
     }
 
 

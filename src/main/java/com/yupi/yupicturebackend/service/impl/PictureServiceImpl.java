@@ -3,6 +3,7 @@ package com.yupi.yupicturebackend.service.impl;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
+import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -205,11 +206,13 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         // JSON 数组查询  and (tag like "%\"Java\""%" and like "%\"Python\""%")
         if (CollUtil.isNotEmpty(tags)) {
             for (String tag : tags) {
+                //这里加 \" 作用是为了有"  例如查询: LIKE '%"Java"%'  不加就是查询: LIKE '%Java%' 在tags数组中 tags = '["Java", "JavaScript"]'
                 queryWrapper.like("tags", "\"" + tag + "\"");
             }
         }
         // 排序
         queryWrapper.orderBy(StrUtil.isNotEmpty(sortField), sortOrder.equals("ascend"), sortField);
+        log.debug("构建完成后的queryWrapper : {}", JSON.toJSONString(queryWrapper));
         return queryWrapper;
     }
 

@@ -3,6 +3,8 @@ package com.yupi.yupicturebackend.service.impl;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
 import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -317,10 +319,23 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         if (ObjUtil.isNull(div)) {
             throw new BusinessException(ErrorCode.OPERATION_ERROR, "获取元素失败");
         }
-        Elements imgElementList = div.select("img.mimg");
+        Elements imgElementList = div.select(".iusc");  // 修改选择器，获取包含完整数据的元素
+        //Elements imgElementList = div.select("img.mimg");
         int uploadCount = 0;
         for (Element imgElement : imgElementList) {
-            String fileUrl = imgElement.attr("src");
+            //String fileUrl = imgElement.attr("src");
+            // 获取data-m属性中的JSON字符串
+            String dataM = imgElement.attr("m");
+            String fileUrl;
+            try {
+                // 解析JSON字符串
+                JSONObject jsonObject = JSONUtil.parseObj(dataM);
+                // 获取murl字段（原始图片URL）
+                fileUrl = jsonObject.getStr("murl");
+            } catch (Exception e) {
+                log.error("解析图片数据失败", e);
+                continue;
+            }
             if (StrUtil.isBlank(fileUrl)) {
                 log.info("当前链接为空，已跳过: {}", fileUrl);
                 continue;

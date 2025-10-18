@@ -91,6 +91,8 @@ public class PictureController {
         // 操作数据库
         boolean result = pictureService.removeById(id);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+        //删除对象存储数据
+        pictureService.clearPictureFile(oldPicture);
         return ResultUtils.success(true);
     }
 
@@ -225,9 +227,6 @@ public class PictureController {
         // 返回结果
         return ResultUtils.success(pictureVOPage);
     }
-
-
-
 
     /**
      * 编辑图片（给用户使用）

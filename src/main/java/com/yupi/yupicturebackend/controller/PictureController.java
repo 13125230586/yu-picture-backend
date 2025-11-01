@@ -1,9 +1,14 @@
 package com.yupi.yupicturebackend.controller;
 
 import cn.hutool.core.util.RandomUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yupi.yupicturebackend.annotation.AuthCheck;
+import com.yupi.yupicturebackend.api.imagesearch.baidu.ImageSearchApiFacade;
+import com.yupi.yupicturebackend.api.imagesearch.baidu.model.ImageSearchResult;
+import com.yupi.yupicturebackend.api.imagesearch.so.SoImageSearchApiFacade;
+import com.yupi.yupicturebackend.api.imagesearch.so.model.SoImageSearchResult;
 import com.yupi.yupicturebackend.common.BaseResponse;
 import com.yupi.yupicturebackend.common.DeleteRequest;
 import com.yupi.yupicturebackend.common.ResultUtils;
@@ -21,6 +26,7 @@ import com.yupi.yupicturebackend.model.vo.PictureVO;
 import com.yupi.yupicturebackend.service.PictureService;
 import com.yupi.yupicturebackend.service.SpaceService;
 import com.yupi.yupicturebackend.service.UserService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
@@ -30,11 +36,11 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-
+@Slf4j
 @RestController
 @RequestMapping("/picture")
 public class PictureController {
@@ -300,4 +306,46 @@ public class PictureController {
         Integer uploadCount = pictureService.uploadPictureByBatch(pictureUploadByBatchRequest, loginUser);
         return ResultUtils.success(uploadCount);
     }
+
+    /**
+     * 以图搜图
+     */
+    @PostMapping("/search/picture")
+    public BaseResponse<List<ImageSearchResult>> searchPictureByPicture(@RequestBody SearchPictureByPictureRequest searchPictureByPictureRequest) {
+        ThrowUtils.throwIf(searchPictureByPictureRequest == null, ErrorCode.PARAMS_ERROR);
+        Long pictureId = searchPictureByPictureRequest.getPictureId();
+        ThrowUtils.throwIf(pictureId == null || pictureId <= 0, ErrorCode.PARAMS_ERROR);
+        Picture oldPicture = pictureService.getById(pictureId);
+        ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR);
+
+        // 获取图片 URL 并移除查询参数
+        String imageUrl = oldPicture.getUrl();
+        String cleanUrl = removeUrlParameters(imageUrl);
+        log.info("原始 URL: {}, 处理后 URL: {}", imageUrl, cleanUrl);
+
+        // 使用带重试机制的搜索（会自动尝试多种格式）
+        List<ImageSearchResult> resultList = ImageSearchApiFacade.searchImage(cleanUrl);
+        return ResultUtils.success(resultList);
+    }
+
+    /**
+     * 移除 URL 中的查询参数
+     *
+     * @param imageUrl 原始图片 URL
+     * @return 不带查询参数的 URL
+     */
+    private String removeUrlParameters(String imageUrl) {
+        if (imageUrl == null || imageUrl.isEmpty()) {
+            return imageUrl;
+        }
+        // 移除 URL 中的查询参数（如 ?imageMogr2/format/webp）
+        int questionMarkIndex = imageUrl.indexOf('?');
+        if (questionMarkIndex != -1) {
+            return imageUrl.substring(0, questionMarkIndex);
+        }
+        return imageUrl;
+    }
+
+
+
 }

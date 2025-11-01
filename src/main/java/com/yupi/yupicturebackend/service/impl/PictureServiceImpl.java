@@ -286,6 +286,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         String reviewMessage = pictureQueryRequest.getReviewMessage();
         Long reviewerId = pictureQueryRequest.getReviewerId();
         Long spaceId = pictureQueryRequest.getSpaceId();
+        Date startEditTime = pictureQueryRequest.getStartEditTime();
+        Date endEditTime = pictureQueryRequest.getEndEditTime();
         boolean nullSpaceId = pictureQueryRequest.isNullSpaceId();
         // 从多字段中搜索 and (name like %xxx% or introduction like %xxx%)
         if (StrUtil.isNotBlank(searchText)) {
@@ -306,6 +308,9 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         queryWrapper.eq(ObjUtil.isNotEmpty(reviewerId), "reviewerId", reviewerId);
         queryWrapper.eq(ObjUtil.isNotEmpty(spaceId), "spaceId", spaceId);
         queryWrapper.isNull(nullSpaceId, "spaceId");
+        // ge: >=  gt: >  lt:<
+        queryWrapper.ge(ObjUtil.isNotEmpty(startEditTime), "editTime", startEditTime);
+        queryWrapper.lt(ObjUtil.isNotEmpty(endEditTime), "editTime", endEditTime);
         // JSON 数组查询  and (tag like "%\"Java\""%" and like "%\"Python\""%")
         if (CollUtil.isNotEmpty(tags)) {
             for (String tag : tags) {

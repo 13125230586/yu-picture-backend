@@ -78,6 +78,11 @@ public class Picture {
     private String picFormat;
 
     /**
+     * 图片主色调
+     */
+    private String picColor;
+
+    /**
      * 创建用户 id
      */
     private Long userId;
@@ -106,7 +111,6 @@ public class Picture {
      * 审核时间
      */
     private Date reviewTime;
-
 
     /**
      * 创建时间
